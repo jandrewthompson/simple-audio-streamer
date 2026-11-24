@@ -1,165 +1,132 @@
-# Christmas 2026 — audio player
+# Simple Audio Streamer
 
-A small, dependency-free HTML5 player. One `<audio>` element, a native control
-bar for seeking/volume/AirPlay, and a custom playlist generated from the files
-in `data/`.
+A small, dependency-free HTML5 audio player. It uses a single `<audio>` element, the browser's native control bar for seeking, volume, and AirPlay, and a custom playlist generated from audio files in `data/`.
 
-- **Browser:** vanilla HTML, CSS and ES modules. No framework, no bundler.
-- **Server:** nginx in Docker (HTTP `Range`, caching, CSP). Cloudflare Tunnel
-  sits in front of it; that part lives outside this project.
-- **Build:** one Python script that reads tags with `ffprobe` and writes
-  `site/playlist.json`.
+- **Browser:** Vanilla HTML, CSS, and ES modules. No framework, no bundler.
+- **Server:** Nginx in Docker (HTTP `Range` support, caching headers, and strict CSP). Designed to sit behind your reverse proxy or tunnel of choice.
+- **Build:** A single Python 3 script that reads tags via `ffprobe` and generates `site/playlist.json`.
+
+## Prerequisites
+
+- **Python 3** and **`ffprobe`** (from FFmpeg) to build the playlist manifest.
+- **Docker** and **Docker Compose** to run the server.
 
 ## Quick start
 
 ```bash
-make build          # data/ -> site/playlist.json
-make up             # docker compose up -d (also runs build first)
-xdg-open http://127.0.0.1:8099   # or just visit it
+make build                       # data/ -> site/playlist.json
+make up                          # docker compose up -d (runs build first)
+xdg-open http://127.0.0.1:8099   # or open in your browser
 ```
 
-`make up` depends on `build`, so the manifest is never older than `data/`.
+`make up` depends on `build`, ensuring the manifest is never older than `data/`.
 
 ## Adding music
 
-1. Create or use an album folder under `data/`, e.g. `data/Christmas 2026/`.
-2. Drop audio files in it: `.mp3`, `.m4a`, `.m4b`, `.aac`, `.ogg`, `.oga`,
-   `.opus`, `.flac`, `.wav`, `.webm`.
+1. Create an album directory under `data/`, e.g., `data/SomeAlbum/`.
+2. Drop audio files into it: `.mp3`, `.m4a`, `.m4b`, `.aac`, `.ogg`, `.oga`, `.opus`, `.flac`, `.wav`, or `.webm`.
 3. Run `make build` and refresh the page.
 
-Metadata rules:
+### Metadata rules
 
-- Title, artist, album, year and track number come from the file tags.
-- If a file has no title/track tag, `NN Title - extra.mp3` is parsed as
-  track `NN`, title `Title`. Leading years such as `2020 Vision` are left
-  alone.
-- Duration always comes from `ffprobe`; without it the row shows `--:--`.
-- Files directly in `data/` become a "Singles" album.
-- Nested folders inside an album are **not** included. The build warns rather
-  than silently dropping them.
-- Hidden files (`._*`, `.DS_Store`, etc.) and files with no audio stream are
-  skipped.
-- Track numbers are preserved as tagged, so a missing source track shows as a
-  gap (this album has no track 5).
+- Title, artist, album, year, and track number are read from file tags.
+- If a file lacks title/track tags, filenames matching `NN Title - extra.mp3` are parsed as track `NN` and title `Title`. Leading years (such as `2020 Vision`) are preserved as part of the title.
+- Duration is extracted via `ffprobe`; without it, rows display `--:--`.
+- Files placed directly in `data/` are grouped into a `"Singles"` album.
+- Nested subdirectories inside an album folder are **not** traversed; the build script emits a warning rather than silently ignoring them.
+- Hidden files (`._*`, `.DS_Store`, etc.) and files without an audio stream are skipped.
+- Track numbers are preserved as tagged rather than renumbered, so missing tracks appear as gaps in the numbering.
 
-`ffprobe` is required by default. `--no-probe` builds from filenames alone if
-you ever need it, at the cost of durations.
+`ffprobe` is required by default. You can pass `--no-probe` to `tools/build_playlist.py` to build from filenames and tags alone if needed, at the cost of omitting track durations.
 
-## Layout
+## Project layout
 
-```
-site/                    document root (served read-only)
+```text
+site/                    Document root (mounted read-only)
   index.html
   assets/app.js
   assets/styles.css
   assets/favicon.svg
-  playlist.json          generated; do not edit by hand
-data/                    audio files, served at /data/
-  Christmas 2026/*.mp3
-deploy/nginx.conf        server config
-tools/build_playlist.py  manifest generator
-tools/smoke_test.sh      HTTP checks
+  playlist.json          Generated; do not edit by hand
+data/                    Audio files, served at /data/
+  SomeAlbum/*.mp3
+deploy/nginx.conf        Nginx server configuration
+tools/build_playlist.py  Playlist manifest generator
+tools/smoke_test.sh      HTTP and Range header verification
 docker-compose.yml
 Makefile
 ```
 
 ## Player behaviour
 
-- Click a row to play it; clicking the active row toggles play/pause.
-- Auto-advance at the end of a track.
-- Shuffle and repeat (off → all → one) persist across visits.
-- Last track, position and volume are restored, **paused** — browsers block
-  audible autoplay, and starting on load would be rude.
-- `#track=8` deep-links a track. The number is the tag number when one exists,
-  otherwise the playlist position. With more than one album the fragment is
-  namespaced as `#track=<album>.<number>` (albums and positions are zero-based),
-  e.g. `#track=1.2`. The hash updates as you play, and pasting a new hash while
-  the page is open selects the track without starting playback.
-- Media Session metadata and handlers: lock screen, headset buttons and car
-  displays work where the browser supports them.
-- Keyboard: `Space` play/pause, `←`/`→` seek 10s, `N`/`P` next/previous,
-  `S` shuffle, `R` repeat, `M` mute. Shortcuts are ignored while a link,
-  button, form field, the native audio control or any other interactive
-  element has focus.
+- Click a row to play; clicking the active row toggles play/pause.
+- Automatically advances to the next track at the end of playback.
+- Shuffle and repeat (`off` → `all` → `one`) states persist across visits in `localStorage`.
+- The last played track, timestamp, and volume are restored on reload in a **paused** state (respecting browser autoplay policies).
+- **Deep-linking:** `#track=8` selects a track by its tag number (or playlist position if untagged). When multiple albums exist, fragments are namespaced as `#track=<album>.<number>` (zero-indexed, e.g., `#track=1.2`). The URL hash updates during playback, and changing the hash selects the target track without forcing playback.
+- **Media Session API:** Lock screen controls, headset buttons, and car head-unit displays work automatically where supported.
+- **Keyboard shortcuts:** `Space` (play/pause), `←`/`→` (seek 10s), `N`/`P` (next/previous), `S` (shuffle), `R` (repeat), `M` (mute). Shortcuts are ignored when focus is on an interactive element or the native `<audio>` bar.
 
-## Serving
+## Serving & deployment
 
 `docker compose up -d` runs `nginx:1.27-alpine` with:
 
-- `/srv/site` from `./site` and `/srv/data` from `./data`, both read-only;
-- full-file audio cached for a year; partial (Range) audio and error responses
-  are not given a long lifetime;
-- `playlist.json`, `index.html` and the page revalidated (`no-cache`);
-- assets cached for an hour so a new manifest is picked up quickly;
-- Range requests (nginx replies `206`/`Content-Range`, `416` for bad ranges);
-- security headers and a same-origin CSP;
-- no directory listing.
+- `./site` mounted at `/srv/site` and `./data` at `/srv/data` (both read-only);
+- Full-file audio responses (`200`) cached for 1 year (`immutable`); partial (`206`) and error responses are not cached long-term;
+- `playlist.json` and `index.html` served with `no-cache` so updates appear immediately;
+- Static assets (`.js`, `.css`, `.svg`) cached for 1 hour;
+- Byte-range requests (`206` with `Content-Range`, `416` for out-of-bounds ranges);
+- Security headers, a strict same-origin CSP, and disabled directory listings.
 
-The container binds to `127.0.0.1:8099` only. Set `MUSIC_PORT` to change the
-host port, or `MUSIC_BIND=0.0.0.0` to listen on every interface.
+### Network & reverse proxy configuration
 
-To expose it through the existing Cloudflare Tunnel, either set
-`MUSIC_BIND=0.0.0.0` and point a public hostname at
-`http://host.docker.internal:8099` (on Linux, add
-`extra_hosts: ["host.docker.internal:host-gateway"]` to the service), or attach
-`music-web` to the tunnel's Docker network and point at `http://music-web:80`.
-No ports need publishing for the second option.
+By default, the container binds only to `127.0.0.1:8099`. You can customize this via environment variables (or a `.env` file):
+
+- `MUSIC_PORT` — Change the host port (default: `8099`).
+- `MUSIC_BIND` — Change the bind interface (default: `127.0.0.1`; set to `0.0.0.0` to listen on all interfaces).
+
+To expose the player publicly, place a reverse proxy (Caddy, Traefik, Nginx, Cloudflare Tunnel, etc.) in front of it using one of two patterns:
+
+1. **Via host port:** Keep the default `127.0.0.1:8099` binding (or set `MUSIC_BIND=0.0.0.0` if your proxy runs inside a container) and proxy traffic to `http://127.0.0.1:8099` (or `http://host.docker.internal:8099`).
+2. **Via Docker network:** Attach the `music-web` service to your reverse proxy's external Docker network in `docker-compose.yml` and proxy directly to `http://music-web:80` without publishing any host ports.
 
 ## Checks
 
 ```bash
-make check   # fails when site/playlist.json is stale
-make test    # stale check + HTTP checks against a running server
+make check   # Fails if site/playlist.json is out of sync with data/
+make test    # Runs stale check + HTTP smoke tests against a running server
 ```
 
-`tools/smoke_test.sh` verifies the page body, the served manifest, MIME types
-for every track, cache headers (including that audio is not compressed), the
-CSP, dotfile denial and the range behaviour: `200`, `206` with the full
-`Content-Range`, a 100-byte body, and `416` past EOF with no year-long cache.
-Override the target with `BASE_URL=http://host:port`, or use
-`make test MUSIC_PORT=8123`.
+`tools/smoke_test.sh` verifies HTML rendering, manifest validity, audio MIME types, cache headers (ensuring audio is not gzip-compressed), CSP headers, dotfile denial, and HTTP `Range` responses (`200`, `206` with `Content-Range`, and `416` past EOF). Override the target URL with `BASE_URL=http://host:port`, or run `make test MUSIC_PORT=8123`.
 
-Do not use `python3 -m http.server` to preview: its stdlib handler ignores
-`Range`, so seeking would download the whole track first. Use the container.
+> **Note:** Do not use `python3 -m http.server` for local testing—its standard library handler ignores `Range` headers, which breaks audio seeking. Always test against the Nginx container.
 
 ## Design notes
 
-- **Why a manifest?** Static servers do not expose directory listings, and
-  having every visitor parse ID3 tags would cost bytes and a dependency. One
-  generated JSON file gives instant durations and one request.
-- **Why nginx?** It already does Range, caching and headers correctly; the
-  Python script stays build-time only.
-- **Privacy:** no analytics, cookies, third-party fonts or CDN requests. The
-  only network requests are the page, its three assets, the manifest and the
-  selected audio.
-- **Replacing a track:** keep the filename stable and the edge/browser can hold
-  the old audio for a year. Rename the file instead; the manifest and player
-  follow automatically. The manifest is generated, so do not hand-edit `src`
-  (a manual `?v=` would fail `make check` and be overwritten by the next build).
-- **Cover art:** none of the source files have embedded art, and the PNG in
-  `data/` is a screenshot, so the cover is typographic CSS driven by the
-  album tags.
-- **Track 5:** absent from the source set; the UI intentionally shows numbers
-  1–4 and 6–12 rather than renumbering.
+- **Why a static manifest?** Static web servers disable directory listings by default, and parsing ID3/Vorbis tags client-side adds bundle weight and latency. Pre-building a single JSON manifest keeps the frontend zero-dependency and loads durations immediately.
+- **Why Nginx?** Nginx handles `Range` requests, MIME types, and cache-control headers natively, keeping the Python tooling strictly build-time.
+- **Privacy:** Zero analytics, cookies, third-party fonts, or external CDN requests. The browser only fetches the HTML, CSS, JS, favicon, `playlist.json`, and requested audio files.
+- **Updating audio files:** Because `200` audio responses are cached for a year, overwriting an existing file in place may leave clients with stale audio. Rename the file (or bump a version suffix in the filename) when replacing audio, then run `make build` so the manifest points to the new path.
+- **Cover art:** Album covers are rendered purely with typographic CSS driven by album metadata tags, avoiding external image dependencies or embedded art extraction.
 
-## Manifest shape
+## Manifest format
 
 ```json
 {
   "generated": "2026-11-24T09:35:00Z",
   "albums": [
     {
-      "dir": "Christmas 2026",
-      "name": "Christmas 2026",
-      "artist": "EWO",
+      "dir": "SomeAlbum",
+      "name": "Some Album",
+      "artist": "Example Artist",
       "year": "2026",
       "tracks": [
         {
-          "title": "O Holy Night",
-          "artist": "EWO",
+          "title": "Opening Track",
+          "artist": "Example Artist",
           "track": 1,
-          "duration": 404.53,
-          "src": "data/Christmas%202026/01%20O%20Holy%20Night%20-%20ALL%20DEMO.mp3"
+          "duration": 245.5,
+          "src": "data/SomeAlbum/01%20Opening%20Track.mp3"
         }
       ]
     }
@@ -167,7 +134,4 @@ Do not use `python3 -m http.server` to preview: its stdlib handler ignores
 }
 ```
 
-`src` is relative and percent-encoded, so it never hardcodes a host and the
-page can be mounted at a subpath as long as the server maps `/data/` there
-too. `generated` is ignored by `--check`, so an unchanged library still
-passes.
+`src` paths are relative and percent-encoded so the player can be hosted at a domain root or under a subpath (provided `/data/` is routed alongside `index.html`). The `generated` timestamp is ignored by `make check` so rebuilding an unchanged library remains idempotent.
