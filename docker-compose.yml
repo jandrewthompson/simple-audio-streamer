@@ -1,0 +1,30 @@
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: music-web
+    restart: unless-stopped
+    ports:
+      # Loopback by default. Set MUSIC_BIND=0.0.0.0 to reach it from the
+      # host's Docker gateway, or attach this container to the tunnel's
+      # network instead. MUSIC_PORT changes the published port.
+      - "${MUSIC_BIND:-127.0.0.1}:${MUSIC_PORT:-8099}:80"
+    volumes:
+      - ./site:/srv/site:ro
+      - ./data:/srv/data:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

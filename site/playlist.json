@@ -1,0 +1,90 @@
+{
+  "generated": "2026-11-24T16:44:52Z",
+  "albums": [
+    {
+      "dir": "Christmas 2026",
+      "name": "Christmas 2026",
+      "artist": "EWO",
+      "year": "2026",
+      "tracks": [
+        {
+          "title": "O Holy Night",
+          "artist": "EWO",
+          "track": 1,
+          "duration": 404.53,
+          "src": "data/Christmas%202026/01%20O%20Holy%20Night%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Peace On Earth",
+          "artist": "EWO",
+          "track": 2,
+          "duration": 270.89,
+          "src": "data/Christmas%202026/02%20Peace%20On%20Earth%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Hark the Herald",
+          "artist": "EWO",
+          "track": 3,
+          "duration": 216.79,
+          "src": "data/Christmas%202026/03%20Hark%20the%20Herald%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Emmanuel Has Come",
+          "artist": "EWO",
+          "track": 4,
+          "duration": 300.88,
+          "src": "data/Christmas%202026/04%20Emmanuel%20Has%20Come%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Emmanuel Always",
+          "artist": "EWO",
+          "track": 6,
+          "duration": 364.06,
+          "src": "data/Christmas%202026/06%20Emmanuel%20Always%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Of The Father",
+          "artist": "EWO",
+          "track": 7,
+          "duration": 347.09,
+          "src": "data/Christmas%202026/07%20Of%20The%20Father%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Silent Night",
+          "artist": "EWO",
+          "track": 8,
+          "duration": 280.56,
+          "src": "data/Christmas%202026/08%20Silent%20Night%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Behold Him",
+          "artist": "EWO",
+          "track": 9,
+          "duration": 228.88,
+          "src": "data/Christmas%202026/09%20Behold%20Him%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Christmas Hymn",
+          "artist": "EWO",
+          "track": 10,
+          "duration": 280.22,
+          "src": "data/Christmas%202026/10%20Christmas%20Hymn%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "Seen the Light",
+          "artist": "EWO",
+          "track": 11,
+          "duration": 362.04,
+          "src": "data/Christmas%202026/11%20Seen%20the%20Light%20-%20ALL%20DEMO.mp3"
+        },
+        {
+          "title": "How Great Thou Art",
+          "artist": "EWO",
+          "track": 12,
+          "duration": 313.84,
+          "src": "data/Christmas%202026/12%20How%20Great%20Thou%20Art%20-%20ALL%20DEMO.mp3"
+        }
+      ]
+    }
+  ]
+}
